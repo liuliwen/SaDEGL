@@ -61,36 +61,25 @@ while iter<itermax
     a5  = a4(rt+1);
     U=rand(NP,D);
     jrand=randi(D,NP,1);
-%     pbest_index=randi(floor(D*p),NP,1);
-    %变异操作
-%     [sortedVal,sortedIndex]=sort(vals,'descend');
     
+    %变异操作    
     w_i=normrnd(Wm,0.2,NP*5,1);
     w_i=abs(w_i);        
     tempindex=find(w_i<1);
     w_i=w_i(tempindex(1:NP));
     
     w=1-sigmf(10*iter/itermax,[10,0.5])*0.2;
-%     f1=1-sigmf(10*iter/itermax,[10,0.5])*0.5;
-%     f2=1+sigmf(10*iter/itermax,[10,0.5])*0.5;
-%     w=1-sigmf(10*iter/itermax,[10,0.5])*0.8;
     f1_i=normrnd(fm1,0.3,NP,1);
     f1_i=abs(f1_i);
     f2_i=normrnd(fm2,0.3,NP,1);
     f2_i=abs(f2_i);
     vpop1=pop+repmat(f1_i,1,D).*(pop(a2,:)-pop(a3,:));
     vpop2=pop+repmat(f2_i,1,D).*(repmat(pop(ibest,:),NP,1)-pop)+repmat(f2_i,1,D).*(pop(a4,:)-pop(a5,:));
-%      f=1;
-%     vpop1=pop+f1*(pop(a2,:)-pop(a3,:))+f1*(pop(a4,:)-pop(a5,:));
-%     vpop2=pop+f2*(repmat(pop(ibest,:),NP,1)-pop)+f2*(repmat(pop(ibest,:),NP,1)-pop(a1,:));
-%     vpop=repmat(w_i,1,D).*vpop1+repmat((1-w_i),1,D).*vpop2;
     vpop=w*vpop1+(1-w)*vpop2;
     %越界处理
     if fun~=7
-%         tempLbound=repmat(Lbound,[NP,1]);
         index=find(vpop<Lbound);
         vpop(index)=(Lbound(index)+pop(index))/2;
-%         tempUbound=repmat(Ubound,[NP,1]);
         index=find(vpop>Ubound);
         vpop(index)=(Ubound(index)+pop(index))/2;
     end
@@ -117,7 +106,6 @@ while iter<itermax
        end
     end
     
-%     fprintf(fid_w,'\niter:%4d,Wm:%f,f:%f.numbesrs success to next generate:%3d.\n\n',iter,Wm,f,sum(w_rec));
     fprintf(fid_w,'\niter:%4d,Wm:%f.numbesrs success to next generate:%3d.\n\n',iter,Wm,sum(w_rec));
     fprintf(fid_f,'\niter:%4d,fm1:%f,fm2:%f.numbesrs success to next generate:%3d.\n\n',iter,fm1,fm2,sum(w_rec));
     fprintf(fid_cr,'\niter:%4d,.numbesrs success to next generate:%3d.\n\n',iter,sum(w_rec));
