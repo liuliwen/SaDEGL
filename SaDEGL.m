@@ -38,10 +38,10 @@ fprintf(fid,'iter:%d. 最优值为：%e\n',iter,bestVal);
 k=0.3;
 cr_i=ones(NP,D)*0.8;
 w_i=zeros(NP,1);
-fm1=0.5;
-fm2=1;
+fm1=0.6;
+fm2=0.9;
 % f=1;
-Wm=0.7;
+Wm=0.8;
 w_rec=zeros(NP,1);
 cr_rec=zeros(NP,D);
 upop=zeros(NP,D);
@@ -63,19 +63,20 @@ while iter<itermax
     jrand=randi(D,NP,1);
     
     %变异操作    
-    w_i=normrnd(Wm,0.2,NP*5,1);
+    w_i=normrnd(Wm,0.3,NP*5,1);
     w_i=abs(w_i);        
     tempindex=find(w_i<1);
     w_i=w_i(tempindex(1:NP));
     
-    w=1-sigmf(10*iter/itermax,[10,0.5])*0.2;
+    w=1-sigmf(10*iter/itermax,[10,0.3])*0.2;
     f1_i=normrnd(fm1,0.3,NP,1);
     f1_i=abs(f1_i);
     f2_i=normrnd(fm2,0.3,NP,1);
     f2_i=abs(f2_i);
     vpop1=pop+repmat(f1_i,1,D).*(pop(a2,:)-pop(a3,:));
     vpop2=pop+repmat(f2_i,1,D).*(repmat(pop(ibest,:),NP,1)-pop)+repmat(f2_i,1,D).*(pop(a4,:)-pop(a5,:));
-    vpop=w*vpop1+(1-w)*vpop2;
+%     vpop=w*vpop1+(1-w)*vpop2;
+    vpop=repmat(w_i,1,D).*vpop1+repmat(1-w_i,1,D).*vpop2;
     %越界处理
     if fun~=7
         index=find(vpop<Lbound);
@@ -98,6 +99,7 @@ while iter<itermax
            if(tempvals(i)<vals(i))
                deltaF(i)=vals(i)-tempvals(i);
                w_rec(i)=1;
+               
            end
            pop(i,:)=upop(i,:);
            vals(i)=tempvals(i);                   
@@ -111,10 +113,13 @@ while iter<itermax
     fprintf(fid_cr,'\niter:%4d,.numbesrs success to next generate:%3d.\n\n',iter,sum(w_rec));
 %     更新Wm
     if sum(w_rec)~=0
-%      Wm=sum(w_rec.*w_i.*deltaF)/sum(w_rec.*deltaF);
-       Wm=0.8*Wm+(0.2)*(sum(w_rec.*w_i)/sum(w_rec)); 
-       fm1=0.8*fm1+(0.2)*(sum(w_rec.*f1_i)/sum(w_rec)); 
-       fm2=0.8*fm2+(0.2)*(sum(w_rec.*f2_i)/sum(w_rec)); 
+        %试一下利用加权平均值进行更新
+       Wm=sum(w_rec.*w_i.*deltaF)/sum(w_rec.*deltaF);
+       fm1=sum(w_rec.*f1_i.*deltaF)/sum(w_rec.*deltaF);
+       fm2=sum(w_rec.*f2_i.*deltaF)/sum(w_rec.*deltaF);
+%        Wm=0.5*Wm+(0.5)*(sum(w_rec.*w_i)/sum(w_rec)); 
+%        fm1=0.8*fm1+(0.2)*(sum(w_rec.*f1_i)/sum(w_rec)); 
+%        fm2=0.8*fm2+(0.2)*(sum(w_rec.*f2_i)/sum(w_rec)); 
        if fm1<0.3
            fm1=0.3;
        end
@@ -127,8 +132,8 @@ while iter<itermax
        if fm1>1.5
            fm1=1.5;
        end
-       if Wm<0.3
-           Wm=0.3;
+       if Wm<0.1
+           Wm=0.1;
        end
        w_rec=zeros(NP,1);
     end
