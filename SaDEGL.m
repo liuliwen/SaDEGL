@@ -36,14 +36,14 @@ iter=1;
 fprintf(fid,'iter:%d. 最优值为：%e\n',iter,bestVal);
 
 k=0.3;
-cr_i=ones(NP,D)*0.8;
+cr_i=ones(NP,D)*0.6;
 w_i=zeros(NP,1);
 fm1=0.6;
 fm2=0.9;
 % f=1;
 Wm=0.8;
 w_rec=zeros(NP,1);
-cr_rec=zeros(NP,D);
+cr_all=zeros(NP,D);
 upop=zeros(NP,D);
 deltaF=zeros(NP,1);
 p=0.1;
@@ -89,9 +89,9 @@ while iter<itermax
     upop(U<cr_i)=vpop(U<cr_i);
     temp=(1:NP)';
     upop([temp,jrand])=vpop([temp,jrand]);
-    cr_rec(U<cr_i)=1;
-    cr_rec([temp,jrand])=1;
-    
+    cr_all(U<cr_i)=1;%记录交叉时选自变异向量的列
+    cr_all([temp,jrand])=1;
+    cr_suc=cr_all;%记录选择后第j列选自变异向量且成功进入下一代的个体
     tempvals = feval(fname, upop, fun);
     for i=1:NP
         
@@ -104,7 +104,7 @@ while iter<itermax
            pop(i,:)=upop(i,:);
            vals(i)=tempvals(i);                   
        else
-           cr_rec(i,:)=0; 
+           cr_suc(i,:)=0; 
        end
     end
     
@@ -114,10 +114,14 @@ while iter<itermax
 %     更新Wm
     if sum(w_rec)~=0
         %试一下利用加权平均值进行更新
-       Wm=sum(w_rec.*w_i.*deltaF)/sum(w_rec.*deltaF);
-       fm1=sum(w_rec.*f1_i.*deltaF)/sum(w_rec.*deltaF);
-       fm2=sum(w_rec.*f2_i.*deltaF)/sum(w_rec.*deltaF);
-%        Wm=0.5*Wm+(0.5)*(sum(w_rec.*w_i)/sum(w_rec)); 
+%        Wm=sum(w_rec.*w_i.*deltaF)/sum(w_rec.*deltaF);
+%        fm1=sum(w_rec.*f1_i.*deltaF)/sum(w_rec.*deltaF);
+%        fm2=sum(w_rec.*f2_i.*deltaF)/sum(w_rec.*deltaF);
+        Wm=0.8*Wm+(0.2)*sum(w_rec.*w_i.*deltaF)/sum(w_rec.*deltaF); 
+        fm1=0.8*fm1+(0.2)*sum(w_rec.*f1_i.*deltaF)/sum(w_rec.*deltaF); 
+        fm2=0.8*fm2+(0.2)*sum(w_rec.*f2_i.*deltaF)/sum(w_rec.*deltaF); 
+        
+%        Wm=0.8*Wm+(0.2)*(sum(w_rec.*w_i)/sum(w_rec)); 
 %        fm1=0.8*fm1+(0.2)*(sum(w_rec.*f1_i)/sum(w_rec)); 
 %        fm2=0.8*fm2+(0.2)*(sum(w_rec.*f2_i)/sum(w_rec)); 
        if fm1<0.3
@@ -138,17 +142,25 @@ while iter<itermax
        w_rec=zeros(NP,1);
     end
     %更新cr_i
-    if rem(iter,5)==0 & iter~=0
-        cr_i_sum=sum(cr_rec,1);
-        cr_i_sum_min=min(cr_i_sum);
-        cr_i_sum_max=max(cr_i_sum);
-        cr_i_sum_mean=mean(cr_i_sum);
-        if cr_i_sum_max-cr_i_sum_min~=0
-            cr_i=cr_i+repmat(0.1*(cr_i_sum-cr_i_sum_mean)/(cr_i_sum_max-cr_i_sum_min),NP,1);
-            cr_i(cr_i>0.9)=0.7;
+%     if rem(iter,5)==0 & iter~=0
+        allSum=sum(cr_all,1);
+        sucSum=sum(cr_suc,1);
+        cr_all=zeros(NP,D);
+        cr_suc=cr_all;
+        
+%         cr_i_sum_min=min(allSum);
+%         cr_i_sum_max=max(allSum);
+%         cr_i_sum_mean=mean(allSum);
+        if sucSum~=0
+%             cr_i=cr_i+repmat(0.1*(cr_i_sum-cr_i_sum_mean)/(cr_i_sum_max-cr_i_sum_min),NP,1);%这里写错了，应该是下面这种
+%             cr_i=cr_i+repmat(0.05*(cr_i_sum*(2/(cr_i_sum_max-cr_i_sum_min))-(cr_i_sum_min+cr_i_sum_max)/(cr_i_sum_max-cr_i_sum_min)),NP,1);
+            rate=sucSum./allSum;
+            meanRate=mean(rate);
+            cr_i=cr_i+repmat(rate-meanRate,NP,1);
+            cr_i(cr_i>=0.9)=0.7;
             cr_i(cr_i<0.2)=0.4;
-            cr_i(cr_i(:,cr_i_sum>5)<0.3)=0.5;
-        end
+            cr_i(cr_i(:,allSum>5)<0.3)=0.5;
+%         end
     end
     
     
