@@ -18,13 +18,13 @@ Gen(15) = 1500;
 %Gen(15) = 1500*2;
 myfunc = 1:23;
 addpath('benchmark');
-for fun=[3,7,8,9,11]%先测试第一个函数
-% for fun=1:23
+% for fun=[8,9,10,11,12]%先测试第一个函数
+for fun=1:23
     func_num = myfunc(fun);
     D = dim(func_num);
     Max_Gen = Gen(func_num);
     bestval = [];
-    %for runindex=1:runs
+%     for runindex=1:runs
     for runindex=1:1%先运行一圈试试
         filename = sprintf('trace/tracef%02d_%02d.txt', func_num, runindex);
         fid = fopen(filename, 'w');

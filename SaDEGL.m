@@ -1,8 +1,5 @@
 function bestval = SaDEGL(fname, fun, D, Lbound, Ubound, NP, itermax, runindex, fid);
 
-w_name=sprintf('para/w_%2d_%2d.txt',fun,runindex);
-fid_w=fopen(w_name,'w');
-
 f_name=sprintf('para/f_%2d_%2d.txt',fun,runindex);
 fid_f=fopen(f_name,'w');
 
@@ -37,12 +34,12 @@ fprintf(fid,'iter:%d. 最优值为：%e\n',iter,bestVal);
 
 k=0.3;
 cr_i=ones(NP,D)*0.6;
-w_i=zeros(NP,1);
-fm1=0.6;
-fm2=0.9;
+% w_i=zeros(NP,1);
+fm1=0.8;
+fm2=0.2;
 % f=1;
 Wm=0.8;
-w_rec=zeros(NP,1);
+f_rec=zeros(NP,1);
 cr_all=zeros(NP,D);
 upop=zeros(NP,D);
 deltaF=zeros(NP,1);
@@ -63,20 +60,11 @@ while iter<itermax
     jrand=randi(D,NP,1);
     
     %变异操作    
-    w_i=normrnd(Wm,0.3,NP*5,1);
-    w_i=abs(w_i);        
-    tempindex=find(w_i<1);
-    w_i=w_i(tempindex(1:NP));
-    
-    w=1-sigmf(10*iter/itermax,[10,0.3])*0.2;
-    f1_i=normrnd(fm1,0.3,NP,1);
+    f1_i=normrnd(fm1,0.5,NP,1);
     f1_i=abs(f1_i);
     f2_i=normrnd(fm2,0.3,NP,1);
     f2_i=abs(f2_i);
-    vpop1=pop+repmat(f1_i,1,D).*(pop(a2,:)-pop(a3,:));
-    vpop2=pop+repmat(f2_i,1,D).*(repmat(pop(ibest,:),NP,1)-pop)+repmat(f2_i,1,D).*(pop(a4,:)-pop(a5,:));
-%     vpop=w*vpop1+(1-w)*vpop2;
-    vpop=repmat(w_i,1,D).*vpop1+repmat(1-w_i,1,D).*vpop2;
+    vpop=pop+repmat(f1_i,1,D).*(pop(a2,:)-pop(a3,:))+repmat(f2_i,1,D).*(repmat(pop(ibest,:),NP,1)-pop)+repmat(f2_i,1,D).*(pop(a4,:)-pop(a5,:));
     %越界处理
     if fun~=7
         index=find(vpop<Lbound);
@@ -93,13 +81,12 @@ while iter<itermax
     cr_all([temp,jrand])=1;
     cr_suc=cr_all;%记录选择后第j列选自变异向量且成功进入下一代的个体
     tempvals = feval(fname, upop, fun);
-    for i=1:NP
-        
+    %选择
+    for i=1:NP       
        if(tempvals(i)<=vals(i))
            if(tempvals(i)<vals(i))
                deltaF(i)=vals(i)-tempvals(i);
-               w_rec(i)=1;
-               
+               f_rec(i)=1;               
            end
            pop(i,:)=upop(i,:);
            vals(i)=tempvals(i);                   
@@ -107,50 +94,31 @@ while iter<itermax
            cr_suc(i,:)=0; 
        end
     end
-    
-    fprintf(fid_w,'\niter:%4d,Wm:%f.numbesrs success to next generate:%3d.\n\n',iter,Wm,sum(w_rec));
-    fprintf(fid_f,'\niter:%4d,fm1:%f,fm2:%f.numbesrs success to next generate:%3d.\n\n',iter,fm1,fm2,sum(w_rec));
-    fprintf(fid_cr,'\niter:%4d,.numbesrs success to next generate:%3d.\n\n',iter,sum(w_rec));
-%     更新Wm
-    if sum(w_rec)~=0
-        %试一下利用加权平均值进行更新
-%        Wm=sum(w_rec.*w_i.*deltaF)/sum(w_rec.*deltaF);
-%        fm1=sum(w_rec.*f1_i.*deltaF)/sum(w_rec.*deltaF);
-%        fm2=sum(w_rec.*f2_i.*deltaF)/sum(w_rec.*deltaF);
-        Wm=0.8*Wm+(0.2)*sum(w_rec.*w_i.*deltaF)/sum(w_rec.*deltaF); 
-        fm1=0.8*fm1+(0.2)*sum(w_rec.*f1_i.*deltaF)/sum(w_rec.*deltaF); 
-        fm2=0.8*fm2+(0.2)*sum(w_rec.*f2_i.*deltaF)/sum(w_rec.*deltaF); 
-        
-%        Wm=0.8*Wm+(0.2)*(sum(w_rec.*w_i)/sum(w_rec)); 
-%        fm1=0.8*fm1+(0.2)*(sum(w_rec.*f1_i)/sum(w_rec)); 
-%        fm2=0.8*fm2+(0.2)*(sum(w_rec.*f2_i)/sum(w_rec)); 
-       if fm1<0.3
-           fm1=0.3;
+    %记录参数信息
+    fprintf(fid_f,'\niter:%4d,fm1:%f,fm2:%f.numbesrs success to next generate:%3d.\n\n',iter,fm1,fm2,sum(f_rec));
+    fprintf(fid_cr,'\niter:%4d,.numbesrs success to next generate:%3d.\n\n',iter,sum(f_rec));
+%   更新Fm
+    if sum(f_rec)~=0       
+        fm1=0.8*fm1+(0.2)*sum(f_rec.*f1_i.*deltaF.*f1_i./(f1_i+f2_i))/sum(f_rec.*deltaF.*f1_i./(f1_i+f2_i)); 
+        fm2=0.8*fm2+(0.2)*sum(f_rec.*f2_i.*deltaF.*f2_i./(f1_i+f2_i))/sum(f_rec.*deltaF.*f2_i./(f1_i+f2_i)); 
+        if fm1<0.2
+           fm1=0.2;
        end
-       if fm2>1.5
-           fm2=1.5;
+       if fm2>1
+           fm2=1;
        end
-       if fm2<0.3
-           fm2=0.3;
+       if fm2<0.2
+           fm2=0.2;
        end
-       if fm1>1.5
-           fm1=1.5;
+       if fm1>1
+           fm1=1;
        end
-       if Wm<0.1
-           Wm=0.1;
-       end
-       w_rec=zeros(NP,1);
+       f_rec=zeros(NP,1);
     end
     %更新cr_i
-%     if rem(iter,5)==0 & iter~=0
         allSum=sum(cr_all,1);
         sucSum=sum(cr_suc,1);
         cr_all=zeros(NP,D);
-        cr_suc=cr_all;
-        
-%         cr_i_sum_min=min(allSum);
-%         cr_i_sum_max=max(allSum);
-%         cr_i_sum_mean=mean(allSum);
         if sucSum~=0
 %             cr_i=cr_i+repmat(0.1*(cr_i_sum-cr_i_sum_mean)/(cr_i_sum_max-cr_i_sum_min),NP,1);%这里写错了，应该是下面这种
 %             cr_i=cr_i+repmat(0.05*(cr_i_sum*(2/(cr_i_sum_max-cr_i_sum_min))-(cr_i_sum_min+cr_i_sum_max)/(cr_i_sum_max-cr_i_sum_min)),NP,1);
@@ -160,20 +128,18 @@ while iter<itermax
             cr_i(cr_i>=0.9)=0.7;
             cr_i(cr_i<0.2)=0.4;
             cr_i(cr_i(:,allSum>5)<0.3)=0.5;
-%         end
-    end
+        end
     
     
      for i=1:NP
-         fprintf(fid_w,'%f ',w_i(i));
          fprintf(fid_f,'%f ',f1_i(i));
      end
      for i=1:D
          fprintf(fid_cr,'%f ',cr_i(1,i));
      end
-     fprintf(fid_w,'\n');
-     fprintf(fid_f,'\n');
-     fprintf(fid_cr,'\n');
+    %记录参数信息
+    fprintf(fid_f,'\n');
+    fprintf(fid_cr,'\n');
     fprintf(fid_pop,'\n iter:%d\n',iter);
     for i=1:NP
         fprintf(fid_pop,'适应度为：%e---',vals(i));
@@ -188,7 +154,6 @@ while iter<itermax
     iter=iter+1;
     fprintf('fun:%d,iter：%d,最优值为：%e.最优值id：%d.\n',fun,iter,bestVal,ibest);
 end  
-fclose(fid_w);
 fclose(fid_f);
 fclose(fid_cr);
 bestval=bestVal;
